@@ -1,0 +1,40 @@
+﻿# Dependencies and generated web builds
+web/node_modules/
+web/dist/
+web/.vercel/
+
+# Reconstruction outputs and extracted frames
+reconstruction/outputs/
+
+# Raw and selected source videos
+web/raw/
+web/selected_full_video/
+web/selected_new_room/
+web/selected_video_full/
+web/selected_video_new/
+
+# Logs and temporary files
+*.log
+*.tmp
+.DS_Store
+
+# Model backups (keep namma_room.glb and its dense texture)
+web/public/models/*backup*.glb
+web/public/models/scene_global_textured_0.png
+
+# Original capture video and extracted frames
+capture/raw/
+capture/selected_full_video/
+capture/**/*.mp4
+capture/**/*.mov
+capture/**/*.jpg
+capture/**/*.jpeg
+capture/**/*.png
+
+# Local editor backups and unused starter files
+web/src/*.bak
+web/src/*.backup
+web/src/*.pre-auto-load-backup
+web/src/assets/javascript.svg
+web/src/assets/vite.svg
+web/src/counter.js
