@@ -35,9 +35,57 @@ viewer.setGrid(true)
 viewer.setShadows(false)
 
 // ── Camera preset buttons ──────────────────────────────────
-document.getElementById('btn-reset-cam')?.addEventListener('click', () => viewer.resetCamera())
-document.getElementById('btn-top-view')?.addEventListener('click', () => viewer.topView())
-document.getElementById('btn-front-view')?.addEventListener('click', () => viewer.frontView())
+document.getElementById('btn-reset-cam')?.addEventListener('click', () => {
+  viewer.setFreeRoam?.(false)
+  viewer.resetCamera()
+})
+document.getElementById('btn-top-view')?.addEventListener('click', () => {
+  viewer.setFreeRoam?.(false)
+  viewer.topView()
+})
+document.getElementById('btn-front-view')?.addEventListener('click', () => {
+  viewer.setFreeRoam?.(false)
+  viewer.frontView()
+})
+
+// ── Free Roam controls ─────────────────────────────────────
+const toggleRoam = document.getElementById('toggle-free-roam')
+const btnExitRoam = document.getElementById('btn-exit-roam')
+const btnExitRoamSidebar = document.getElementById('btn-exit-roam-sidebar')
+
+function exitFreeRoam() {
+  viewer.setFreeRoam?.(false)
+}
+
+toggleRoam?.addEventListener('change', () => {
+  viewer.setFreeRoam?.(toggleRoam.checked)
+})
+
+btnExitRoam?.addEventListener('click', exitFreeRoam)
+btnExitRoamSidebar?.addEventListener('click', exitFreeRoam)
+
+viewer.onFreeRoamChange?.(active => {
+  if (toggleRoam) toggleRoam.checked = active
+  if (btnExitRoam) btnExitRoam.style.display = active ? 'block' : 'none'
+  if (btnExitRoamSidebar) btnExitRoamSidebar.style.display = active ? 'block' : 'none'
+
+  const controlsHint = document.getElementById('controls-hint')
+  if (controlsHint) {
+    if (active) {
+      controlsHint.innerHTML = `
+        <span>⌨ WASD / Arrows: Move</span>
+        <span>🖱 Mouse: Look</span>
+        <span>Esc: Exit Free Roam</span>
+      `
+    } else {
+      controlsHint.innerHTML = `
+        <span>🖱 Drag: Orbit</span>
+        <span>🖱 Right-drag / Shift+drag: Pan</span>
+        <span>🖱 Scroll: Zoom</span>
+      `
+    }
+  }
+})
 
 // ── Loading overlay helpers ────────────────────────────────
 const overlay = document.getElementById('loading-overlay')

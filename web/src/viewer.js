@@ -592,7 +592,130 @@ export function createViewer(canvas) {
   }
 
   // â”€â”€ Event handlers â”€â”€
+  // ── Free Roam State ──
+  let isFreeRoam = false
+  let freeRoamYaw = 0
+  let freeRoamPitch = 0
+  const freeRoamKeys = {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false
+  }
+  let onFreeRoamChangeCallback = null
+
+  function setFreeRoam(enabled) {
+    if (isFreeRoam === enabled) return
+    isFreeRoam = enabled
+
+    if (isFreeRoam) {
+      orbit._dragging = false
+      orbit._button = -1
+
+      const distFromCenter = Math.hypot(camera.position.x, camera.position.z)
+      if (distFromCenter > 14 || camera.position.y > 4 || camera.position.y < 0.5) {
+        camera.position.set(0, 1.6, 2)
+      } else {
+        camera.position.y = Math.max(0.8, Math.min(2.4, camera.position.y))
+      }
+
+      const euler = new THREE.Euler(0, 0, 0, 'YXZ')
+      euler.setFromQuaternion(camera.quaternion)
+      freeRoamYaw = euler.y
+      freeRoamPitch = Math.max(-1.45, Math.min(1.45, euler.x))
+
+      try {
+        const res = canvas.requestPointerLock?.()
+        if (res && typeof res.catch === 'function') res.catch(() => {})
+      } catch (err) {}
+    } else {
+      if (document.pointerLockElement === canvas) {
+        try {
+          document.exitPointerLock?.()
+        } catch (err) {}
+      }
+
+      freeRoamKeys.forward = false
+      freeRoamKeys.backward = false
+      freeRoamKeys.left = false
+      freeRoamKeys.right = false
+
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+      orbit.target.copy(camera.position).addScaledVector(forward, 4)
+      orbit._panOffset.set(0, 0, 0)
+      syncSpherical()
+    }
+
+    if (onFreeRoamChangeCallback) {
+      onFreeRoamChangeCallback(isFreeRoam)
+    }
+  }
+
+  function onPointerLockChange() {
+    if (document.pointerLockElement !== canvas && isFreeRoam) {
+      setFreeRoam(false)
+    }
+  }
+
+  function onMouseMove(e) {
+    if (!isFreeRoam) return
+    if (document.pointerLockElement !== canvas) return
+
+    const dx = e.movementX ?? e.mozMovementX ?? e.webkitMovementX ?? 0
+    const dy = e.movementY ?? e.mozMovementY ?? e.webkitMovementY ?? 0
+
+    const sensitivity = 0.0022
+    freeRoamYaw -= dx * sensitivity
+    freeRoamPitch -= dy * sensitivity
+
+    const maxPitch = 1.48 // ~85 degrees
+    freeRoamPitch = Math.max(-maxPitch, Math.min(maxPitch, freeRoamPitch))
+
+    camera.quaternion.setFromEuler(new THREE.Euler(freeRoamPitch, freeRoamYaw, 0, 'YXZ'))
+  }
+
+  function onKeyDown(e) {
+    if (!isFreeRoam) return
+
+    if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      e.preventDefault()
+    }
+
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') freeRoamKeys.forward = true
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') freeRoamKeys.backward = true
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') freeRoamKeys.left = true
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') freeRoamKeys.right = true
+
+    if (e.code === 'Escape') {
+      setFreeRoam(false)
+    }
+  }
+
+  function onKeyUp(e) {
+    if (!isFreeRoam) return
+
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') freeRoamKeys.forward = false
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') freeRoamKeys.backward = false
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') freeRoamKeys.left = false
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') freeRoamKeys.right = false
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
+  document.addEventListener('pointerlockchange', onPointerLockChange)
+
+  // ── Event handlers ──
   function onPointerDown(e) {
+    if (isFreeRoam) {
+      if (document.pointerLockElement !== canvas) {
+        try {
+          const res = canvas.requestPointerLock?.()
+          if (res && typeof res.catch === 'function') res.catch(() => {})
+        } catch (err) {}
+      }
+      return
+    }
     orbit._dragging = true
     orbit._button = e.button
     orbit._lastX = e.clientX
@@ -601,6 +724,7 @@ export function createViewer(canvas) {
   }
 
   function onPointerMove(e) {
+    if (isFreeRoam) return
     if (!orbit._dragging) return
     const dx = e.clientX - orbit._lastX
     const dy = e.clientY - orbit._lastY
@@ -619,11 +743,13 @@ export function createViewer(canvas) {
   }
 
   function onPointerUp(e) {
+    if (isFreeRoam) return
     orbit._dragging = false
     orbit._button = -1
   }
 
   function onWheel(e) {
+    if (isFreeRoam) return
     e.preventDefault()
     orbit.spherical.radius *= 1 + e.deltaY * 0.001
     applySpherical()
@@ -657,11 +783,43 @@ export function createViewer(canvas) {
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let animId = null
   let lastTime = performance.now()
+  let prevFrameTime = performance.now()
   let frameCount = 0
   let fps = 0
 
+  const _moveVector = new THREE.Vector3()
+
+  function updateFreeRoam(dt) {
+    if (!isFreeRoam) return
+
+    _moveVector.set(0, 0, 0)
+    if (freeRoamKeys.forward) _moveVector.z -= 1
+    if (freeRoamKeys.backward) _moveVector.z += 1
+    if (freeRoamKeys.left) _moveVector.x -= 1
+    if (freeRoamKeys.right) _moveVector.x += 1
+
+    if (_moveVector.lengthSq() > 0) {
+      _moveVector.normalize()
+      _moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), freeRoamYaw)
+
+      const speed = 3.5 // reasonable walking speed in m/s
+      camera.position.addScaledVector(_moveVector, speed * dt)
+
+      // Prevent camera from moving excessively far from room (Requirement 7)
+      const maxBound = 22
+      camera.position.x = Math.max(-maxBound, Math.min(maxBound, camera.position.x))
+      camera.position.z = Math.max(-maxBound, Math.min(maxBound, camera.position.z))
+      camera.position.y = Math.max(0.3, Math.min(4.5, camera.position.y))
+    }
+  }
+
   function animate(now) {
     animId = requestAnimationFrame(animate)
+    const dt = Math.min((now - prevFrameTime) / 1000, 0.1)
+    prevFrameTime = now
+
+    updateFreeRoam(dt)
+
     frameCount++
     if (now - lastTime >= 1000) {
       fps = frameCount
@@ -729,6 +887,7 @@ export function createViewer(canvas) {
   return {
     // â”€â”€ Camera presets â”€â”€
     resetCamera() {
+      if (isFreeRoam) setFreeRoam(false)
       if (loadedModel) {
         const { box } = computeBounds(loadedModel)
         frameBox(box)
@@ -745,6 +904,7 @@ export function createViewer(canvas) {
       }
     },
     topView() {
+      if (isFreeRoam) setFreeRoam(false)
       if (loadedModel) {
         const { box } = computeBounds(loadedModel)
         frameBox(box, new THREE.Vector3(0, 1, 0.0001))
@@ -757,6 +917,7 @@ export function createViewer(canvas) {
       }
     },
     frontView() {
+      if (isFreeRoam) setFreeRoam(false)
       if (loadedModel) {
         const { box } = computeBounds(loadedModel)
         frameBox(box, new THREE.Vector3(0, 0.2, 1))
@@ -931,6 +1092,17 @@ export function createViewer(canvas) {
     },
 
     // â”€â”€ Cleanup â”€â”€
+    // ── Free Roam ──
+    setFreeRoam(on) {
+      setFreeRoam(!!on)
+    },
+    isFreeRoam() {
+      return isFreeRoam
+    },
+    onFreeRoamChange(callback) {
+      onFreeRoamChangeCallback = callback
+    },
+
     destroy() {
       cancelAnimationFrame(animId)
       resizeObserver.disconnect()
@@ -940,6 +1112,10 @@ export function createViewer(canvas) {
       canvas.removeEventListener('pointercancel', onPointerUp)
       canvas.removeEventListener('wheel', onWheel)
       canvas.removeEventListener('contextmenu', onContextMenu)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+      document.removeEventListener('pointerlockchange', onPointerLockChange)
       renderer.dispose()
     },
   }

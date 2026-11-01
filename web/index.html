@@ -81,6 +81,11 @@
             <input type="checkbox" id="toggle-shadows" />
             <span class="toggle-track"></span>
           </label>
+          <label class="toggle-row">
+            <span>Free Roam</span>
+            <input type="checkbox" id="toggle-free-roam" />
+            <span class="toggle-track"></span>
+          </label>
         </section>
 
         <section class="sidebar-section">
@@ -88,6 +93,7 @@
           <button class="btn btn-block" id="btn-reset-cam">↩ Reset Camera</button>
           <button class="btn btn-block" id="btn-top-view">⬆ Top View</button>
           <button class="btn btn-block" id="btn-front-view">➡ Front View</button>
+          <button class="btn btn-block" id="btn-exit-roam-sidebar" style="display:none; color: var(--color-danger, #e74c3c); margin-top: 6px;">✕ Exit Free Roam</button>
         </section>
 
         <div class="sidebar-footer">
@@ -99,6 +105,11 @@
       <!-- 3D Viewport -->
       <main id="viewport-wrapper">
         <canvas id="viewport"></canvas>
+
+        <!-- Exit Free Roam button -->
+        <button id="btn-exit-roam" class="btn btn-primary" style="display:none; position:absolute; top:14px; right:16px; z-index:25; box-shadow:0 4px 14px rgba(0,0,0,0.5); font-weight:600;">
+          ✕ Exit Free Roam (Esc)
+        </button>
 
         <!-- Empty-state overlay — shown when no scan is loaded -->
         <div id="empty-state">
