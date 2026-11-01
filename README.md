@@ -8,6 +8,12 @@ NammaSpace is a web-based platform for reconstructing an indoor space from video
 
 The deployed viewer loads the reconstructed indoor room model (`namma_room.glb`) with its associated texture.
 
+## 🎥 Project Demo Video
+
+Watch our project demonstration here:
+
+[**▶ Watch the Demo Video on Google Drive**](https://drive.google.com/file/d/1whcCIxsh5zC-tnf4SzdgvEw4ZBrzJiFB/view?usp=sharing)
+
 ## Reconstruction Pipeline
 
 1. Record a video walkthrough of the indoor space.
@@ -35,5 +41,6 @@ The deployed viewer loads the reconstructed indoor room model (`namma_room.glb`)
 - COLMAP — camera registration and sparse reconstruction
 - OpenMVS — dense reconstruction, meshing and texturing
 - Three.js — browser
+
 
 
